@@ -1,0 +1,5 @@
+/target
+*.idx
+*.sub
+*.srt
+.vscode/
