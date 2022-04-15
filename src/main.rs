@@ -4,6 +4,7 @@ use image::imageops::colorops::invert;
 use std::process::Command;
 use std::fs::File;
 use std::fs;
+use std::env::current_exe;
 use std::fs::remove_file;
 use std::io::prelude::*;
 use toml::Value;
@@ -58,8 +59,16 @@ fn convert_file(mut srt: &File, idx: Index, tesseract: &str) {
 
 
 fn main() {
+    let mut directory = current_exe().expect("Couldn't get directory of executable, try again?");
+    directory.pop();
+    directory.push("conf.toml");
+    let directory = File::open(directory);
+    let mut conf_file = match directory {
+        Ok(file) => file,
+        Err(_) => File::open("conf.toml").expect("Cannot find conf.toml")
+    };
 
-    let mut conf_file = File::open("conf.toml").expect("Cannot find conf.toml");
+
     let mut conf = String::new();
     conf_file.read_to_string(&mut conf).expect("Cannot read conf.toml");
 
