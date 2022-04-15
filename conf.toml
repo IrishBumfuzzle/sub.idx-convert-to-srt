@@ -1,8 +1,0 @@
-# can either be "single" or "all", 'single' converts only the file of 'file', 'all' converts all sub/idx pairs present in directory. If 'all', ignores 'file' argument
-mode = "all"
-
-# path of the .idx/.sub file, without extension 
-file = ''
-
-# path to tesseract executable
-tesseract = ''

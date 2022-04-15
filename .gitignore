@@ -3,6 +3,6 @@
 *.sub
 *.srt
 .vscode/
-*.toml
+conf.toml
 *.png
 *.txt
