@@ -3,20 +3,12 @@ use image::RgbaImage;
 use image::imageops::colorops::invert;
 use std::process::Command;
 use std::fs::File;
+use std::fs;
 use std::fs::remove_file;
 use std::io::prelude::*;
-use std::env;
+use toml::Value;
 
-
-fn main() {
-    let args:Vec<String> = env::args().collect::<Vec<String>>();
-
-    if args.len() != 3 {
-        panic!("Arguments to be given in the format: <.idx/.sub file name without extension (so both of them should have same name)> <path to tesseract executable>");
-    }
-
-    let idx = Index::open(format!("{}.idx", args[1])).unwrap();
-    let mut srt = File::create(format!("{}.srt", args[1])).unwrap();
+fn convert_file(mut srt: &File, idx: Index, tesseract: &str) {
     let mut sub_number = 1; //Serial number of subtitle as required by srt format
     let mut sub_time: f64 = 0.0;
 
@@ -35,8 +27,7 @@ fn main() {
         invert(&mut img); //Inverts image as required by tesseract (dark text on light background)
         img.save("DONT_DELETE.png").unwrap();
 
-
-        Command::new(&args[2]).arg("DONT_DELETE.png").arg("DONT_DELETE").output().expect("Failed to execute tesseract, ensure path is correct");
+        Command::new(tesseract).arg("DONT_DELETE.png").arg("DONT_DELETE").output().expect("Failed to execute tesseract, ensure path is correct");
         let mut file = File::open("DONT_DELETE.txt").unwrap();
         let mut subs = String::new();
         file.read_to_string(&mut subs).expect("Can't open srt file for some reason");
@@ -49,11 +40,57 @@ fn main() {
 
         srt.write((&format!("{}\n{}\n{}\n", sub_number, time_stamp, subs)).as_bytes()).expect("Can't write to srt file for some reason");
         sub_number += 1;
-        
     }
 
     remove_file("DONT_DELETE.png").expect("couldn't delete file, now you can delete the png and txt yourself");
     remove_file("DONT_DELETE.txt").expect("couldn't delete file, now you can delete the png and txt yourself");
+    
+}
+
+
+
+fn main() {
+
+    let mut conf_file = File::open("conf.toml").expect("Cannot find conf.toml");
+    let mut conf = String::new();
+    conf_file.read_to_string(&mut conf).expect("Cannot read conf.toml");
+
+    let conf = conf.parse::<Value>().unwrap();
+
+    if conf["mode"].as_str().unwrap() == "all" {
+        let entries = fs::read_dir(".").unwrap()
+        .map(|res| res.map(|e| e.path()));
+        // .collect::<Vec<_>>();
+        
+        for fi in entries {
+            let mut file_name = fi.unwrap().to_str().unwrap().to_string();
+            if !file_name.contains(".idx") {
+                continue;
+            }
+            file_name = file_name.replace(".idx", "");
+
+            let idx = Index::open(format!("{}.idx", file_name)).expect("Check if both .sub and .idx files exist and have the same name"); //opens idx file
+            let mut srt = File::create(format!("{}.srt", file_name)).unwrap(); //opens srt file to write to
+
+            println!("Converting {}", file_name);
+            convert_file(&mut srt, idx, conf["tesseract"].as_str().unwrap());
+            println!("Converted {}", file_name);
+
+        }
+    }
+
+
+    else {
+        let file_name = conf["file"].as_str().unwrap();
+        let idx = Index::open(format!("{}.idx", file_name)).expect("Check if both .sub and .idx files exist and have the same name"); //opens idx file
+        let mut srt = File::create(format!("{}.srt", file_name)).unwrap(); //opens srt file to write to
+
+        println!("Converting {}", file_name);
+        convert_file(&mut srt, idx, conf["tesseract"].as_str().unwrap());
+        println!("Converted {}", file_name);
+    }
+
+    
 }
 
 
