@@ -32,6 +32,14 @@ fn convert_file(mut srt: &File, idx: Index, tesseract: &str) {
         let mut subs = String::new();
         file.read_to_string(&mut subs).expect("Can't open srt file for some reason");
 
+        // Sometimes tesseract output is empty, this runs tesseract on a different mode for better recognition.
+        if subs == "" {
+            Command::new(tesseract).arg("DONT_DELETE.png").arg("DONT_DELETE").arg("--psm").arg("8").output().expect("Failed to execute tesseract, ensure path is correct");
+            file = File::open("DONT_DELETE.txt").unwrap();
+            subs = String::new();
+            file.read_to_string(&mut subs).expect("Can't open srt file for some reason");
+        }
+
         let start_time = time_parse(sub.start_time());
         let end_time = time_parse(sub.end_time());
         let time_stamp = format!("{:02}:{:02}:{:02},{:03} --> {:02}:{:02}:{:02},{:03}", start_time.0, start_time.1, start_time.2, start_time.3, end_time.0, end_time.1, end_time.2, end_time.3);
