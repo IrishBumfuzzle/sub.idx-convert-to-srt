@@ -60,10 +60,9 @@ fn main() {
     if conf["mode"].as_str().unwrap() == "all" {
         let entries = fs::read_dir(".").unwrap()
         .map(|res| res.map(|e| e.path()));
-        // .collect::<Vec<_>>();
         
-        for fi in entries {
-            let mut file_name = fi.unwrap().to_str().unwrap().to_string();
+        for files in entries {
+            let mut file_name = files.unwrap().to_str().unwrap().to_string();
             if !file_name.contains(".idx") {
                 continue;
             }
