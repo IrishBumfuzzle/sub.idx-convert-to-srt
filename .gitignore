@@ -6,3 +6,4 @@
 conf.toml
 *.png
 *.txt
+cargo.lock
