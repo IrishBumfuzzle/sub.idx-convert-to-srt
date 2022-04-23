@@ -1,12 +1,6 @@
 use vobsub::Index;
-use image::RgbaImage;
 use image::imageops::colorops::invert;
-use std::process::Command;
-use std::fs::File;
-use std::fs;
-use std::env::current_exe;
-use std::fs::remove_file;
-use std::io::prelude::*;
+use std::{process::Command, fs::{File, remove_file}, env::current_exe, io::prelude::*};
 use toml::Value;
 
 fn convert_file(mut srt: &File, idx: Index, tesseract: &str) {
@@ -24,7 +18,7 @@ fn convert_file(mut srt: &File, idx: Index, tesseract: &str) {
             sub_time = sub.start_time();
         }
 
-        let mut img: RgbaImage = sub.to_image(idx.palette());
+        let mut img: image::RgbaImage = sub.to_image(idx.palette());
         invert(&mut img); //Inverts image as required by tesseract (dark text on light background)
         img.save("DONT_DELETE.png").unwrap();
 
@@ -62,20 +56,25 @@ fn main() {
     let mut directory = current_exe().expect("Couldn't get directory of executable, try again?");
     directory.pop();
     directory.push("conf.toml");
-    let directory = File::open(directory);
-    let mut conf_file = match directory {
-        Ok(file) => file,
-        Err(_) => File::open("conf.toml").expect("Cannot find conf.toml")
+
+    let conf_file = File::open(&directory);
+    let conf_file = match conf_file {
+        Ok(file) => Ok(file),
+        Err(_) => File::open("conf.toml")
+    };
+    match conf_file {
+        Ok(_) => (),
+        Err(_) => make_config(directory)
     };
 
 
     let mut conf = String::new();
-    conf_file.read_to_string(&mut conf).expect("Cannot read conf.toml");
+    conf_file.unwrap().read_to_string(&mut conf).expect("Cannot read conf.toml");
 
     let conf = conf.parse::<Value>().unwrap();
 
     if conf["mode"].as_str().unwrap() == "all" {
-        let entries = fs::read_dir(".").unwrap()
+        let entries = std::fs::read_dir(".").unwrap()
         .map(|res| res.map(|e| e.path()));
         
         for files in entries {
@@ -120,4 +119,13 @@ fn time_parse(x: f64) -> (u32, u32, u32, u32) {
     let s = x / 1000;
     x = x - s*1000;
     (h,m,s,x)
+}
+
+
+fn make_config(path: std::path::PathBuf) {
+    let mut conf = File::create(path).expect("Cannot create config file");
+    conf.write("# can either be \"single\" or \"all\", \'single\' converts only the file of \'file\', \'all\' converts all sub/idx pairs present in directory. If \'all\', ignores \'file\' argument\nmode = \"file\"\n\n# path of the .idx/.sub file, without extension\nfile = \'\'\n\n# path to tesseract executable\ntesseract = \'\'".as_bytes()).expect("Cannot make conf.toml");
+
+    println!("Made a new config file, edit it to put the tesseract path and mode");
+    std::process::exit(0);
 }
