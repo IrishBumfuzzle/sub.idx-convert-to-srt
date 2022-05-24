@@ -2,7 +2,7 @@
 
 ## Need -: 
 
-No actually free online service exists for this. Open source projects also use tesseract *but* they use modules for it based on their language which need tesseract build from the ground up and I had a lot of problem due to that.
+No actually free online service exists for this. Open source projects also use tesseract *but* they use modules for it based on their language which need tesseract built from the ground up and I faced a lot of problems due to that.
 
 ## Requirements
 
