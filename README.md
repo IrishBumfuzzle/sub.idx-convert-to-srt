@@ -23,7 +23,7 @@ Tesseract - Path to the tesseract executable.
 ### Building
 
 ```batch
-git pull https://github.com/IrishBumfuzzle/sub.idx-convert-to-srt
+git clone https://github.com/IrishBumfuzzle/sub.idx-convert-to-srt
 cd sub.idx-convert-to-srt
 cargo build --release
 target/release/sub-to-srt.exe
