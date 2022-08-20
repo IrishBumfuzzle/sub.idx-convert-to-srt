@@ -2,6 +2,7 @@ use vobsub::Index;
 use image::imageops::colorops::invert;
 use std::{process::Command, fs::{File, remove_file}, env::current_exe, io::prelude::*};
 use toml::Value;
+use glob::glob;
 
 fn convert_file(mut srt: &File, idx: Index, tesseract: &str) {
     let mut sub_number = 1; //Serial number of subtitle as required by srt format
@@ -22,7 +23,10 @@ fn convert_file(mut srt: &File, idx: Index, tesseract: &str) {
         invert(&mut img); //Inverts image as required by tesseract (dark text on light background)
         img.save("DONT_DELETE.png").unwrap();
 
-        Command::new(tesseract).arg("DONT_DELETE.png").arg("DONT_DELETE").output().expect("Failed to execute tesseract, ensure path is correct");
+        match Command::new(tesseract).arg("DONT_DELETE.png").arg("DONT_DELETE").output() {
+            Ok(_) => (),
+            Err(_) => cleanup("Failed to execute tesseract, ensure path is correct")
+        };
         let mut file = File::open("DONT_DELETE.txt").unwrap();
         let mut subs = String::new();
         file.read_to_string(&mut subs).expect("Can't open srt file for some reason");
@@ -45,11 +49,11 @@ fn convert_file(mut srt: &File, idx: Index, tesseract: &str) {
         sub_number += 1;
     }
 
-    remove_file("DONT_DELETE.png").expect("couldn't delete file, now you can delete the png and txt yourself");
-    remove_file("DONT_DELETE.txt").expect("couldn't delete file, now you can delete the png and txt yourself");
-    
+    #[allow(unused_must_use)] {
+    remove_file("DONT_DELETE.png");
+    remove_file("DONT_DELETE.txt");
+    }
 }
-
 
 
 fn main() {
@@ -74,10 +78,8 @@ fn main() {
     let conf = conf.parse::<Value>().unwrap();
 
     if conf["mode"].as_str().unwrap() == "all" {
-        let entries = std::fs::read_dir(".").unwrap()
-        .map(|res| res.map(|e| e.path()));
         
-        for files in entries {
+        for files in glob("/**/*.idx").expect("Failed to read glob pattern") {
             let mut file_name = files.unwrap().to_str().unwrap().to_string();
             if !file_name.contains(".idx") {
                 continue;
@@ -91,6 +93,12 @@ fn main() {
             convert_file(&mut srt, idx, conf["tesseract"].as_str().unwrap());
             println!("Converted {}", file_name);
 
+            if conf["delete"].as_str().unwrap() == "true" {
+                #[allow(unused_must_use)] {
+                remove_file(format!("{}.idx", file_name));
+                remove_file(format!("{}.sub", file_name));
+                }
+            }
         }
     }
 
@@ -128,4 +136,13 @@ fn make_config(path: std::path::PathBuf) {
 
     println!("Made a new config file, edit it to put the tesseract path and mode");
     std::process::exit(0);
+}
+
+
+fn cleanup(err: &str) {
+    #[allow(unused_must_use)] {
+    remove_file("DONT_DELETE.png");
+    remove_file("DONT_DELETE.txt");
+    }
+    panic!("{}", err);
 }
